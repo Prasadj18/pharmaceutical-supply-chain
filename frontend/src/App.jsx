@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { getContract } from "./contract";
 
+// ⭐ NEW: Import BatchHistory component
+import BatchHistory from "./components/BatchHistory";
+
 function App() {
   const [productName, setProductName] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -95,13 +98,14 @@ function App() {
       }}
     >
       <h1
-  style={{
-    fontSize: "32px",
-    marginBottom: "30px",
-    color: "#6c2bd9",
-  }}
->
-  Pharmaceutical Supply Chain App </h1>
+        style={{
+          fontSize: "32px",
+          marginBottom: "30px",
+          color: "#6c2bd9",
+        }}
+      >
+        Pharmaceutical Supply Chain App
+      </h1>
 
       {/* Register Batch */}
       <div
@@ -201,6 +205,7 @@ function App() {
           border: "1px solid #ccc",
           padding: "20px",
           borderRadius: "10px",
+          marginBottom: "30px",
         }}
       >
         <h2>Transfer Ownership</h2>
@@ -229,6 +234,10 @@ function App() {
           {loading ? "Processing..." : "Transfer Ownership"}
         </button>
       </div>
+
+      {/* ⭐ NEW SECTION: Batch History */}
+      {/* This displays the transaction/ownership history of batches */}
+      <BatchHistory />
     </div>
   );
 }
