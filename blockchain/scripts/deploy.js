@@ -1,16 +1,18 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  const SupplyChain = await ethers.getContractFactory("SupplyChain");
+    console.log("Deploying SupplyChain contract...");
 
-  const contract = await SupplyChain.deploy();
+    const SupplyChain = await ethers.getContractFactory("SupplyChain");
 
-  await contract.deployed();
+    const contract = await SupplyChain.deploy();
 
-  console.log("Contract deployed at:", contract.address);
+    await contract.deployed();
+
+    console.log("SupplyChain deployed at:", contract.address);
 }
 
 main().catch((error) => {
-  console.error(error);
-  process.exit(1);
+    console.error(error);
+    process.exitCode = 1;
 });
