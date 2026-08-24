@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { ethers } from "ethers";
+import { useState, useEffect } from "react";
 import { getContract } from "./contract";
 
 function App() {
@@ -29,76 +28,211 @@ function App() {
   const [batchId, setBatchId] = useState("");
   const [batch, setBatch] = useState(null);
   const [ownershipHistory, setOwnershipHistory] = useState([]);
-  const [historyRoles, setHistoryRoles] = useState([]);
 
   // =========================================================
   // TRANSFER
   // =========================================================
 
   const [transferId, setTransferId] = useState("");
-  const [newOwner, setNewOwner] = useState("");
   const [statusBatchId, setStatusBatchId] = useState("");
 
   const [loading, setLoading] = useState(false);
+
+  // =========================================================
+  // ADMIN — ASSIGN ROLE
+  // =========================================================
+
+  const [assignAddress, setAssignAddress] = useState("");
+  const [assignRoleValue, setAssignRoleValue] = useState("2");
+  const [assignLoading, setAssignLoading] = useState(false);
 
 
   // =========================================================
   // CONNECT WALLET
   // =========================================================
 
-  const connectWallet = async () => {
+// =========================================================
+// METAMASK ACCOUNT / ROLE HANDLING
+// =========================================================
 
-    try {
-
-      const contract = await getContract();
-
-      if (!contract) {
-        return;
-      }
-
-      const signer =
-        await contract.runner.getAddress();
-
-      setWalletAddress(signer);
-      setConnected(true);
+const roleNames = {
+  0: "NONE",
+  1: "ADMIN",
+  2: "MANUFACTURER",
+  3: "TRANSPORTER",
+  4: "DISTRIBUTOR",
+  5: "PHARMACY",
+};
 
 
-      // Get role from smart contract
+// Update UI based on currently selected MetaMask account
+const updateWalletState = async (accounts) => {
 
-      const roleValue =
-        await contract.roles(signer);
+  if (!accounts || accounts.length === 0) {
 
+    setWalletAddress("");
+    setRole("");
+    setConnected(false);
 
-      const roleNumber =
-        Number(roleValue);
+    return;
+  }
 
+  try {
 
-      const roleNames = {
+    const contract = await getContract();
 
-        0: "NONE",
-        1: "ADMIN",
-        2: "MANUFACTURER",
-        3: "TRANSPORTER",
-        4: "DISTRIBUTOR",
-        5: "PHARMACY",
-
-      };
-
-
-      setRole(
-        roleNames[roleNumber] || "UNKNOWN"
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-      alert(
-        "Failed to connect wallet"
-      );
+    if (!contract) {
+      return;
     }
+
+    const address = accounts[0];
+
+    const roleValue =
+      await contract.roles(address);
+
+    const roleNumber =
+      Number(roleValue);
+
+    setWalletAddress(address);
+
+    setRole(
+      roleNames[roleNumber] || "UNKNOWN"
+    );
+
+    setConnected(true);
+
+  } catch (err) {
+
+    console.error(
+      "Failed to update wallet state:",
+      err
+    );
+
+  }
+};
+
+
+// =========================================================
+// AUTOMATIC METAMASK ACCOUNT SWITCH
+// =========================================================
+
+useEffect(() => {
+
+  if (!window.ethereum) {
+    return;
+  }
+
+  const handleAccountsChanged = async (
+    accounts
+  ) => {
+
+    console.log(
+      "MetaMask account changed:",
+      accounts[0]
+    );
+
+    await updateWalletState(accounts);
   };
 
+
+  window.ethereum.on(
+    "accountsChanged",
+    handleAccountsChanged
+  );
+
+
+  // Check current account when page loads
+  window.ethereum
+    .request({
+      method: "eth_accounts",
+    })
+    .then((accounts) => {
+
+      if (
+        accounts &&
+        accounts.length > 0
+      ) {
+        updateWalletState(accounts);
+      }
+
+    })
+    .catch((err) => {
+
+      console.error(
+        "Initial MetaMask account check failed:",
+        err
+      );
+
+    });
+
+
+  return () => {
+
+    window.ethereum.removeListener(
+      "accountsChanged",
+      handleAccountsChanged
+    );
+
+  };
+
+}, []);
+
+
+// =========================================================
+// CONNECT WALLET BUTTON
+// =========================================================
+
+const connectWallet = async () => {
+
+  try {
+
+    if (!window.ethereum) {
+
+      alert(
+        "Please install MetaMask."
+      );
+
+      return;
+    }
+
+
+    // This opens MetaMask ONLY when
+    // the user clicks Connect MetaMask.
+    const accounts =
+      await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
+
+    if (
+      !accounts ||
+      accounts.length === 0
+    ) {
+
+      alert(
+        "No MetaMask account selected."
+      );
+
+      return;
+    }
+
+
+    await updateWalletState(accounts);
+
+
+  } catch (err) {
+
+    console.error(
+      "MetaMask connection failed:",
+      err
+    );
+
+    alert(
+      "Failed to connect MetaMask."
+    );
+
+  }
+};
 
   // =========================================================
   // REGISTER BATCH
@@ -436,7 +570,117 @@ setOwnershipHistory(historyWithRoles);
   // =========================================================
   // PHARMACY STATUS UPDATES
   // =========================================================
+const markAtDistributor = async () => {
 
+  try {
+
+    setLoading(true);
+
+    if (!statusBatchId) {
+
+      alert("Please enter Batch ID");
+
+      return;
+    }
+
+    const contract =
+      await getContract();
+
+    if (!contract) {
+      return;
+    }
+
+
+    const data =
+      await contract.getBatch(
+        statusBatchId
+      );
+
+
+    if (!data.exists) {
+
+      alert(
+        "Batch does not exist."
+      );
+
+      return;
+    }
+
+
+    const signer =
+      await contract.runner.getAddress();
+
+
+    // Must actually belong to Distributor
+    if (
+      data.currentOwner.toLowerCase() !==
+      signer.toLowerCase()
+    ) {
+
+      alert(
+        "This wallet is not the current owner of this batch."
+      );
+
+      return;
+    }
+
+
+    // Batch must currently be IN_TRANSIT
+    if (
+      Number(data.status) !== 1
+    ) {
+
+      alert(
+        "Batch must be IN_TRANSIT before marking it AT_DISTRIBUTOR."
+      );
+
+      return;
+    }
+
+
+    const tx =
+      await contract.updateBatchStatus(
+        statusBatchId,
+        2
+      );
+
+
+    await tx.wait();
+
+
+    alert(
+      "Batch marked AT_DISTRIBUTOR successfully!"
+    );
+
+
+    setStatusBatchId("");
+
+
+    // Refresh displayed batch if
+    // the same batch is currently open
+    if (
+      batchId === statusBatchId
+    ) {
+      await fetchBatch();
+    }
+
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert(
+      err?.reason ||
+      err?.shortMessage ||
+      "Failed to update status"
+    );
+
+  } finally {
+
+    setLoading(false);
+
+  }
+};
   const markAtPharmacy = async () => {
 
     try {
@@ -489,9 +733,9 @@ setOwnershipHistory(historyWithRoles);
       }
 
       const tx =
-        await contract.updateBatchStatus(
+        await contract.markDelivered(
           statusBatchId,
-          4
+          true
         );
 
       await tx.wait();
@@ -509,6 +753,60 @@ setOwnershipHistory(historyWithRoles);
     } finally {
 
       setLoading(false);
+
+    }
+  };
+
+  // =========================================================
+  // ADMIN — ASSIGN ROLE
+  // =========================================================
+  // Lets the Admin assign a role to any address directly from the
+  // UI, instead of needing Hardhat console/scripts. Role values
+  // match the contract's Role enum: 1=ADMIN, 2=MANUFACTURER,
+  // 3=TRANSPORTER, 4=DISTRIBUTOR, 5=PHARMACY.
+
+  const assignRoleToAddress = async () => {
+
+    if (!assignAddress) {
+      alert("Enter an address first");
+      return;
+    }
+
+    try {
+
+      setAssignLoading(true);
+
+      const contract = await getContract();
+
+      if (!contract) {
+        setAssignLoading(false);
+        return;
+      }
+
+      const tx =
+        await contract.assignRole(
+          assignAddress,
+          Number(assignRoleValue)
+        );
+
+      await tx.wait();
+
+      alert("Role assigned successfully!");
+
+      setAssignAddress("");
+
+    } catch (err) {
+
+      console.error(err);
+
+      alert(
+        err?.reason ||
+        "Failed to assign role. Make sure you're connected as Admin."
+      );
+
+    } finally {
+
+      setAssignLoading(false);
 
     }
   };
@@ -548,6 +846,7 @@ const isManufacturer = role === "MANUFACTURER";
 const isTransporter = role === "TRANSPORTER";
 const isDistributor = role === "DISTRIBUTOR";
 const isPharmacy = role === "PHARMACY";
+const isAdmin = role === "ADMIN";
 
 
 const getStatusName = (status) => {
@@ -685,6 +984,61 @@ const getOwnerRole = (roleValue) => {
         )}
 
       </div>
+
+
+      {/* =====================================================
+          ADMIN — ASSIGN ROLE
+      ===================================================== */}
+
+      {isAdmin && (
+        <div style={cardStyle}>
+
+          <h2>
+            Assign Role
+          </h2>
+
+          <p style={{ color: "#666" }}>
+            Assign a role to any wallet address. Required after
+            every fresh deploy, since role assignments don't
+            carry over.
+          </p>
+
+          <input
+            type="text"
+            placeholder="Wallet address (0x...)"
+            value={assignAddress}
+            onChange={(e) =>
+              setAssignAddress(e.target.value)
+            }
+            style={inputStyle}
+          />
+
+          <select
+            value={assignRoleValue}
+            onChange={(e) =>
+              setAssignRoleValue(e.target.value)
+            }
+            style={inputStyle}
+          >
+            <option value="1">ADMIN</option>
+            <option value="2">MANUFACTURER</option>
+            <option value="3">TRANSPORTER</option>
+            <option value="4">DISTRIBUTOR</option>
+            <option value="5">PHARMACY</option>
+          </select>
+
+          <button
+            onClick={assignRoleToAddress}
+            disabled={assignLoading}
+            style={buttonStyle}
+          >
+            {assignLoading
+              ? "Assigning..."
+              : "Assign Role"}
+          </button>
+
+        </div>
+      )}
 
 
       {/* =====================================================
@@ -881,12 +1235,13 @@ const getOwnerRole = (roleValue) => {
               <strong>
                 Status:
               </strong>{" "}
-              {getStatusName(
-                Number(batch.status)
-              )}
+              {batch.exists
+                ? getStatusName(Number(batch.status))
+                : "NOT REGISTERED"}
             </p>
 
           </div>
+
 
           <div
   style={{
@@ -906,8 +1261,13 @@ const getOwnerRole = (roleValue) => {
     const currentStatus =
       Number(batch.status);
 
+    // Only mark a step as completed if the batch actually exists
+    // on-chain. Previously this only checked step.id <= currentStatus,
+    // and a non-existent batch defaults to status "0" (MANUFACTURED),
+    // so it always showed the first step as done even for a batch
+    // that was never registered.
     const completed =
-      step.id <= currentStatus;
+      batch.exists && step.id <= currentStatus;
 
     return (
       <div
@@ -1034,6 +1394,46 @@ const getOwnerRole = (roleValue) => {
    {/* =====================================================
     TRANSFER OWNERSHIP
 ===================================================== */}
+
+{/* =====================================================
+    DISTRIBUTOR STATUS UPDATE
+===================================================== */}
+
+{isDistributor && (
+
+  <div style={cardStyle}>
+
+    <h2>
+      Update Medicine Status
+    </h2>
+
+    <p style={{ color: "#666" }}>
+      Your role: <strong>{role}</strong>
+    </p>
+
+    <input
+      type="number"
+      placeholder="Batch ID"
+      value={statusBatchId}
+      onChange={(e) =>
+        setStatusBatchId(e.target.value)
+      }
+      style={inputStyle}
+    />
+
+    <button
+      onClick={markAtDistributor}
+      disabled={loading}
+      style={buttonStyle}
+    >
+      {loading
+        ? "Processing..."
+        : "Mark At Distributor"}
+    </button>
+
+  </div>
+
+)}
 
       {(isManufacturer ||
         isTransporter ||
