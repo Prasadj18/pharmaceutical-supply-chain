@@ -31,3 +31,4 @@
 /snapshots
 .env
 users.json
+qrcodes.json

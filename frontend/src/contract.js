@@ -1,23 +1,3 @@
-// frontend/src/contract.js
-//
-// CHANGED AGAIN: real MetaMask confirmation is back for every write.
-//
-// Reads (Fetch Batch, Batch History) still use a plain JsonRpcProvider
-// pointed at 127.0.0.1:8545 — no wallet needed to just look things up.
-//
-// Writes (registerBatch, transferOwnership, markDelivered) now go
-// through window.ethereum (MetaMask) via getMetaMaskContract(). This
-// means every write pops up MetaMask's own "Confirm" screen — that
-// popup IS the security guarantee: without clicking it, no transaction
-// is ever sent. This replaces the earlier version, which signed
-// transactions in-memory with a private key handed over at login and
-// had no real confirmation step at all.
-//
-// The private key is only ever used ONCE per account: right after
-// signup, to import the account into MetaMask (see
-// ImportWalletModal.jsx). After that one-time import, MetaMask holds
-// the key and this file never touches it again.
-
 import { ethers } from "ethers";
 import SupplyChain from "./SupplyChain.json";
 

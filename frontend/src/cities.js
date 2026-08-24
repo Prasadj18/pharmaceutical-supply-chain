@@ -1,9 +1,3 @@
-// frontend/src/cities.js
-//
-// A curated list of major Indian cities for the sign-up "City" dropdown.
-// Not exhaustive (India has thousands of towns/cities) — this covers the
-// major metros and state capitals, which is enough for a capstone demo.
-// Add more freely; the app doesn't depend on this list being complete.
 
 export const INDIAN_CITIES = [
   "Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Ahmedabad", "Chennai",

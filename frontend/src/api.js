@@ -1,8 +1,3 @@
-// frontend/src/api.js
-//
-// All calls to the local backend server (blockchain/server.js) live here,
-// so App.jsx doesn't need to know URLs or fetch/error-handling details.
-
 const API_BASE = "http://127.0.0.1:4000";
 
 async function request(path, options = {}) {
@@ -94,3 +89,15 @@ export const adminSetAccountStatus = (adminPassword, username, disabled) =>
     method: "POST",
     body: JSON.stringify({ adminPassword, username, disabled }),
   });
+
+// NEW: QR code -> IPFS storage (see server.js for the full explanation
+// of why/how). Both are best-effort — the QR itself is generated and
+// downloaded entirely client-side and never depends on these.
+
+export const uploadQRCodeToIPFS = (batchCode, imageDataUrl) =>
+  request("/ipfs/upload-qr", { method: "POST", body: JSON.stringify({ batchCode, imageBase64: imageDataUrl }) });
+
+export const getQRCodeFromIPFS = (batchCode) =>
+  request(`/ipfs/qrcode/${encodeURIComponent(batchCode)}`).catch(() => null); // 404 -> null, not an error
+
+export const getIPFSStatus = () => request("/ipfs/status");

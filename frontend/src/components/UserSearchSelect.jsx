@@ -1,16 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { searchUsers } from "../api";
 import { shortenAddress } from "../participants";
-
-// A "type a username, get a dropdown of matches" picker.
-// Used by Manufacturer/Transporter/Distributor when transferring ownership,
-// so nobody ever has to type or paste a wallet address.
-//
-// NEW: `roleFilter` restricts results to a single role — e.g. a
-// Manufacturer's picker passes roleFilter="Distributor" so only
-// Distributors ever show up here, matching what the smart contract will
-// actually allow. This is a UX convenience only; the real guarantee is
-// enforced on-chain in SupplyChain.sol regardless of what this shows.
 export default function UserSearchSelect({ excludeUsername, roleFilter, onSelect }) {
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState([]);

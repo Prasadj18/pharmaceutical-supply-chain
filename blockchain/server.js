@@ -71,6 +71,12 @@ const FUNDING_AMOUNT_ETH = process.env.FUNDING_AMOUNT_ETH || "10";
 const PORT = process.env.FAUCET_PORT || 4000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const USERS_FILE = path.join(__dirname, "users.json");
+// NEW: same pattern as users.json, but for QR-code IPFS records.
+const QRCODES_FILE = path.join(__dirname, "qrcodes.json");
+// NEW: local IPFS (Kubo) node config — see the big comment block near
+// the /ipfs/upload-qr route below for why this exists and how to run it.
+const IPFS_API_URL = process.env.IPFS_API_URL || "http://127.0.0.1:5001";
+const IPFS_GATEWAY_URL = process.env.IPFS_GATEWAY_URL || "http://127.0.0.1:8080/ipfs/";
 
 // NEW: the deployed contract address + ABI, so this server can send the
 // assignRole() transaction after a signup. Same address the frontend
@@ -172,6 +178,16 @@ function loadUsers() {
 
 function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+
+// NEW: same pattern as users.json, but for QR-code IPFS records.
+function loadQRCodes() {
+  if (!fs.existsSync(QRCODES_FILE)) return {};
+  const raw = fs.readFileSync(QRCODES_FILE, "utf8").trim();
+  return raw ? JSON.parse(raw) : {};
+}
+function saveQRCodes(qrcodes) {
+  fs.writeFileSync(QRCODES_FILE, JSON.stringify(qrcodes, null, 2));
 }
 
 // Passwords are hashed with Node's built-in scrypt (no extra dependency
@@ -742,6 +758,106 @@ app.post("/faucet", async (req, res) => {
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", network: "hardhat-localhost", faucet: faucetWallet?.address });
+});
+
+// ============================================================
+// IPFS — decentralized storage for each batch's QR code image
+// ============================================================
+// WHY THIS EXISTS: the QR code itself only needs to encode the batch
+// code as text (a few bytes) — decoding it is exactly the same as
+// typing the batch code into the "Enter Batch Code" field, and that
+// alone needs no IPFS, no backend call, nothing but the QR library
+// running in the browser. IPFS is used here for a different job:
+// keeping ONE canonical, shareable image file per batch — e.g. so it
+// can be reprinted onto packaging, or looked up by CID from any device,
+// without regenerating it locally. This matches "IPFS (Optional
+// Storage)" in the architecture diagram in your report.
+//
+// HOW THIS TALKS TO IPFS: rather than pull in the (now deprecated)
+// ipfs-http-client SDK, this calls a locally running Kubo (go-ipfs)
+// node's own HTTP API directly with a multipart POST — the same API
+// IPFS Desktop exposes by default at 127.0.0.1:5001. No extra library
+// needed; Node's built-in fetch/FormData/Blob do the whole job.
+//
+// HOW TO RUN IT: install IPFS Desktop (https://docs.ipfs.tech/install/ipfs-desktop/)
+// or run `ipfs daemon` from Kubo directly, then leave it running
+// alongside Hardhat and this server. If it's not running, QR download
+// still works perfectly (that part is 100% client-side) — only the
+// "Save to IPFS" button will show a clear error instead of a CID.
+//
+// WHERE THE RESULT IS STORED: blockchain/qrcodes.json (git-ignored,
+// same pattern as users.json) maps batchCode -> { cid, url,
+// uploadedAt }. This is NOT written on-chain — it's just a convenience
+// index so the app can show "this batch's QR is already on IPFS at
+// <link>" without re-uploading it every time.
+
+app.post("/ipfs/upload-qr", async (req, res) => {
+  try {
+    const { batchCode, imageBase64 } = req.body;
+    if (!batchCode || !batchCode.trim()) {
+      return res.status(400).json({ error: "batchCode is required." });
+    }
+    if (!imageBase64 || typeof imageBase64 !== "string") {
+      return res.status(400).json({ error: "imageBase64 (a data URL or raw base64 PNG) is required." });
+    }
+
+    // Accept either a raw base64 string or a full "data:image/png;base64,...." URL.
+    const base64Data = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+    const bytes = Buffer.from(base64Data, "base64");
+
+    const form = new FormData();
+    form.append("file", new Blob([bytes], { type: "image/png" }), `${batchCode.trim()}.png`);
+
+    let ipfsRes;
+    try {
+      ipfsRes = await fetch(`${IPFS_API_URL}/api/v0/add?pin=true`, {
+        method: "POST",
+        body: form,
+      });
+    } catch {
+      return res.status(503).json({
+        error: `Cannot reach a local IPFS node at ${IPFS_API_URL}. Install and run IPFS Desktop (or 'ipfs daemon'), then try again. QR download still works without it.`,
+      });
+    }
+
+    if (!ipfsRes.ok) {
+      const text = await ipfsRes.text().catch(() => "");
+      return res.status(502).json({ error: `IPFS node rejected the upload: ${text || ipfsRes.statusText}` });
+    }
+
+    const result = await ipfsRes.json(); // Kubo returns { Name, Hash, Size }
+    const cid = result.Hash;
+    const url = `${IPFS_GATEWAY_URL}${cid}`;
+
+    const qrcodes = loadQRCodes();
+    qrcodes[batchCode.trim()] = { cid, url, uploadedAt: new Date().toISOString() };
+    saveQRCodes(qrcodes);
+
+    return res.json({ success: true, cid, url });
+  } catch (err) {
+    console.error("IPFS upload error:", err);
+    return res.status(500).json({ error: "Could not upload QR code to IPFS." });
+  }
+});
+
+// ---------- Look up a previously-uploaded QR code's IPFS record ----------
+app.get("/ipfs/qrcode/:batchCode", (req, res) => {
+  const qrcodes = loadQRCodes();
+  const record = qrcodes[req.params.batchCode];
+  if (!record) return res.status(404).json({ error: "No IPFS record for that batch code yet." });
+  return res.json(record);
+});
+
+// ---------- Quick check: is a local IPFS node reachable? ----------
+app.get("/ipfs/status", async (req, res) => {
+  try {
+    const r = await fetch(`${IPFS_API_URL}/api/v0/version`, { method: "POST" });
+    if (!r.ok) throw new Error("bad response");
+    const data = await r.json();
+    return res.json({ connected: true, version: data.Version });
+  } catch {
+    return res.json({ connected: false });
+  }
 });
 
 init().then(() => {

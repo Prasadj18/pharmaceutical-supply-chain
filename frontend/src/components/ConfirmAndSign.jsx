@@ -1,16 +1,4 @@
-// ============================================================
 // ConfirmAndSign
-// ============================================================
-// CHANGED: this used to ask the user to re-enter their password as a
-// stand-in "confirmation" step, because at that point transactions were
-// signed silently in memory with no real approval UI at all.
-//
-// Now that writes go through MetaMask (see contract.js
-// getMetaMaskContract), MetaMask itself pops up its own "Confirm"
-// screen before any transaction is sent — that popup IS the real
-// security boundary. This component is now just a friendly review
-// screen: it shows what's about to happen and hands off to MetaMask
-// when the user clicks Continue. No password field needed here anymore.
 export default function ConfirmAndSign({ summary, onConfirmed, onCancel }) {
   return (
     <div style={overlayStyle}>

@@ -1,26 +1,8 @@
-// frontend/src/components/batchTimelineData.js
-//
-// Non-component pieces shared by BatchTimeline.jsx and BatchHistory.jsx
-// — split into their own plain-JS module (rather than living inside
-// BatchTimeline.jsx alongside its components) because Vite's Fast
-// Refresh only works cleanly when a file exports EITHER components OR
-// plain values/hooks, not a mix of both.
-
 import { useEffect, useState } from "react";
 import { getReadOnlyContract, getProvider } from "../contract";
 import { getUserByAddress } from "../api";
 
 export const DELIVERY_STATUS_LABELS = ["Pending", "Delivered", "Not Delivered"];
-
-/**
- * Given a resolved numeric batch id, fetches the batch's meta info
- * (manufacture/expiry dates, delivery status, rating) and its full
- * event timeline (registration, transfers, delivery updates, ratings),
- * resolving every address involved to a username/role/city.
- *
- * Pass null/undefined/"" to skip fetching (e.g. before a list row has
- * been clicked yet) — the hook just returns its idle state.
- */
 export function useBatchTimeline(batchId) {
   const [state, setState] = useState({
     loading: false,
@@ -35,10 +17,6 @@ export function useBatchTimeline(batchId) {
     let cancelled = false;
 
     if (batchId === null || batchId === undefined || batchId === "") {
-      // Reset asynchronously (not during the effect body itself) so we
-      // never call setState synchronously inside the effect — matches
-      // the pattern used elsewhere in this app (see Dashboard's
-      // refreshBalance effect).
       Promise.resolve().then(() => {
         if (!cancelled) {
           setState({ loading: false, error: "", batchCodeLabel: "", batchMeta: null, events: [], resolved: {} });

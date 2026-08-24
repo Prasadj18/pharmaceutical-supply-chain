@@ -1,15 +1,3 @@
-// frontend/src/participants.js
-//
-// OLD: this file held a hardcoded list of 4 wallet addresses mapped to
-// names/roles (Swayam, ShadowFox, Iranna, Sagar), matching Hardhat's
-// fixed default accounts.
-//
-// NEW: participants are no longer fixed — anyone can sign up as any
-// role through the app, and the backend (blockchain/server.js,
-// users.json) is now the source of truth for "which wallet belongs to
-// which username/role". This file is kept only for small formatting
-// helpers used across components.
-
 /**
  * Shorten an address for display, e.g. 0x90F79bf6...93b906
  */

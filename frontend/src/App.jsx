@@ -32,6 +32,8 @@ import BatchHistory from "./components/BatchHistory";
 import BatchTimelineView from "./components/BatchTimeline";
 import ConfirmAndSign from "./components/ConfirmAndSign";
 import ImportWalletModal from "./components/ImportWalletModal";
+import BatchCodeInput from "./components/BatchCodeInput";
+import QRCodeBox from "./components/QRCodeBox";
 
 // NEW: sidebar navigation per role on the owner dashboard. Manufacturer
 // gets Register Batch (their own page, since only they can register);
@@ -62,13 +64,69 @@ const NAV_ITEMS = {
   ],
 };
 
-// NEW: icon per sidebar item, for the WhatsApp-style icon rail.
+// CHANGED: replaced colorful emoji with simple monochrome line-icon SVGs
+// (using currentColor, so they pick up the button's text color) — matches
+// WhatsApp's flat, professional icon style instead of emoji.
+function HomeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11l9-8 9 8" />
+      <path d="M5 10v10h14V10" />
+    </svg>
+  );
+}
+function DocumentIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+      <path d="M9 13h6M9 17h6" />
+    </svg>
+  );
+}
+function ArchiveIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="4" rx="1" />
+      <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
+      <path d="M10 13h4" />
+    </svg>
+  );
+}
+function SwapIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 3l4 4-4 4" />
+      <path d="M3 7h8" />
+      <path d="M17 21l-4-4 4-4" />
+      <path d="M21 17h-8" />
+    </svg>
+  );
+}
+function HistoryIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v6h6" />
+      <path d="M3.5 9a9 9 0 1 0 2-5.5L3 9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  );
+}
+function PillIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="10" width="18" height="6" rx="3" transform="rotate(-45 12 12)" />
+      <path d="M8.5 8.5l7 7" />
+    </svg>
+  );
+}
+
 const NAV_ICONS = {
-  register: "📝",
-  registered: "📦",
-  transfer: "🔄",
-  fetch: "📜",
-  deliveries: "💊",
+  register: DocumentIcon,
+  registered: ArchiveIcon,
+  transfer: SwapIcon,
+  fetch: HistoryIcon,
+  deliveries: PillIcon,
 };
 
 // CHANGED: "Consumer" and "Wholesaler" are no longer sign-up roles.
@@ -209,9 +267,14 @@ export default function App() {
 
   return (
     <>
-      {(view === "landing" || view === "admin-login" || view === "admin-dashboard") && <HeroBackdrop />}
+      {(view === "landing" ||
+        view === "admin-login" ||
+        view === "admin-dashboard" ||
+        view === "owner-auth" ||
+        view === "forgot-password" ||
+        view === "consumer-verify") && <HeroBackdrop />}
       <div style={view === "dashboard" ? dashboardPageStyle : pageStyle}>
-        {view !== "landing" && <h1 style={titleStyle}>Pharmaceutical Supply Chain App</h1>}
+        {view !== "landing" && view !== "owner-auth" && <h1 style={titleStyle}>Pharmaceutical Supply Chain App</h1>}
 
         {chainOk === false && (
           <div style={{ ...cardStyle, borderColor: "#dc2626", color: "#fca5a5" }}>
@@ -256,6 +319,120 @@ export default function App() {
 // them to declare their own z-index. Purely CSS/SVG — no external
 // image asset — so it never depends on a photo being bundled.
 // ============================================================
+// ============================================================
+// Small field-prefix icons + IconInput helper — used by the redesigned
+// Sign In / Register forms below to match the reference mockup (an icon
+// inside each field, an eye toggle on password fields).
+// ============================================================
+function PersonFieldIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+    </svg>
+  );
+}
+function LockFieldIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+function MailFieldIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 7l9 6 9-6" />
+    </svg>
+  );
+}
+function EyeToggleIcon({ open }) {
+  return open ? (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ) : (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a19.7 19.7 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a19.7 19.7 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+
+// A single-line icon-prefixed input, with an optional right-side toggle
+// (used for the password show/hide eye icon). Wraps the shared inputStyle
+// so it stays consistent with every other input in the app.
+function IconInput({
+  icon,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  onKeyDown,
+  autoFocus,
+  rightToggle, // { open, onClick } — omit for no right icon
+}) {
+  return (
+    <div style={heroInputWrapperStyle}>
+      <span style={heroInputIconStyle}>{icon}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        onKeyDown={onKeyDown}
+        autoFocus={autoFocus}
+        style={{
+          ...inputStyle,
+          marginBottom: 0,
+          paddingLeft: "38px",
+          paddingRight: rightToggle ? "38px" : "12px",
+        }}
+      />
+      {rightToggle && (
+        <button type="button" onClick={rightToggle.onClick} style={heroInputRightToggleStyle} tabIndex={-1}>
+          <EyeToggleIcon open={rightToggle.open} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Shared "Blockchain Secured / End-to-End Traceability / Data Integrity
+// Assured" trust row — used under Landing and under the Sign In/Register
+// card.
+function TrustFooter() {
+  return (
+    <div style={heroFooterRowStyle}>
+      <span style={heroFooterItemStyle}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L20 5V11C20 16 16.5 19.5 12 21C7.5 19.5 4 16 4 11V5L12 2Z" stroke="#64748b" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+        Blockchain Secured
+      </span>
+      <span style={heroFooterItemStyle}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="5" y="3" width="14" height="18" rx="2" stroke="#64748b" strokeWidth="2" />
+          <line x1="8" y1="8" x2="16" y2="8" stroke="#64748b" strokeWidth="1.5" />
+          <line x1="8" y1="12" x2="16" y2="12" stroke="#64748b" strokeWidth="1.5" />
+          <line x1="8" y1="16" x2="13" y2="16" stroke="#64748b" strokeWidth="1.5" />
+        </svg>
+        End-to-End Traceability
+      </span>
+      <span style={heroFooterItemStyle}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="5" y="11" width="14" height="10" rx="2" stroke="#64748b" strokeWidth="2" />
+          <path d="M8 11V7A4 4 0 0 1 16 7V11" stroke="#64748b" strokeWidth="2" />
+        </svg>
+        Data Integrity Assured
+      </span>
+    </div>
+  );
+}
+
 function HeroBackdrop() {
   return (
     <div style={heroBackdropStyle}>
@@ -380,7 +557,7 @@ function Landing({ onChoose }) {
                 <path d="M12 2L20 5V11C20 16 16.5 19.5 12 21C7.5 19.5 4 16 4 11V5L12 2Z" stroke="white" strokeWidth="2" strokeLinejoin="round" />
                 <path d="M8.5 12L11 14.5L15.5 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Verify →
+              Verify 
             </button>
           </div>
 
@@ -395,7 +572,7 @@ function Landing({ onChoose }) {
             </div>
             <h3 style={{ margin: "10px 0 6px 0", color: "#0f172a" }}>Owner</h3>
             <p style={{ color: "#475569", fontSize: "13px", margin: "0 0 16px 0" }}>
-              Manufacturer / Transporter / Distributor / Pharmacy — manage and track batches.
+              Manufacturer / Transporter / Distributor / Pharmacy - manage and track batches.
             </p>
             <button style={{ ...heroButtonStyle, backgroundColor: "#334155" }} onClick={() => onChoose("owner-auth")}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -403,36 +580,13 @@ function Landing({ onChoose }) {
                 <rect x="10" y="8" width="4" height="12" fill="white" />
                 <rect x="16" y="4" width="4" height="16" fill="white" />
               </svg>
-              Open Dashboard →
+              Open Dashboard 
             </button>
           </div>
         </div>
       </div>
 
-      <div style={heroFooterRowStyle}>
-        <span style={heroFooterItemStyle}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L20 5V11C20 16 16.5 19.5 12 21C7.5 19.5 4 16 4 11V5L12 2Z" stroke="#64748b" strokeWidth="2" strokeLinejoin="round" />
-          </svg>
-          Blockchain Secured
-        </span>
-        <span style={heroFooterItemStyle}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="5" y="3" width="14" height="18" rx="2" stroke="#64748b" strokeWidth="2" />
-            <line x1="8" y1="8" x2="16" y2="8" stroke="#64748b" strokeWidth="1.5" />
-            <line x1="8" y1="12" x2="16" y2="12" stroke="#64748b" strokeWidth="1.5" />
-            <line x1="8" y1="16" x2="13" y2="16" stroke="#64748b" strokeWidth="1.5" />
-          </svg>
-          End-to-End Traceability
-        </span>
-        <span style={heroFooterItemStyle}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="5" y="11" width="14" height="10" rx="2" stroke="#64748b" strokeWidth="2" />
-            <path d="M8 11V7A4 4 0 0 1 16 7V11" stroke="#64748b" strokeWidth="2" />
-          </svg>
-          Data Integrity Assured
-        </span>
-      </div>
+      <TrustFooter />
     </div>
   );
 }
@@ -707,48 +861,62 @@ function AdminBatchesPanel() {
 function OwnerAuth({ onBack, onLoggedIn, onForgotPassword }) {
   const [mode, setMode] = useState("signin"); // "signin" | "signup"
   // NEW: while SignInForm is in its "Connect MetaMask" step, hide the
-  // Sign In / Sign Up tabs and the outer Back button — Cancel (inside
-  // that step) already returns to the plain sign-in form, so having a
-  // second, different "Back" button here was confusing and redundant.
+  // outer Back button and the hero header/footer chrome — Cancel (inside
+  // that step) already returns to the plain sign-in form, and that step
+  // keeps its own dark, focused layout rather than the light auth card.
   const [inConnectStep, setInConnectStep] = useState(false);
 
   return (
-    <div style={cardStyle}>
-      {!inConnectStep && (
-        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-          <button
-            style={{ ...tabButtonStyle, ...(mode === "signin" ? tabActiveStyle : {}) }}
-            onClick={() => setMode("signin")}
-          >
-            Sign In
-          </button>
-          <button
-            style={{ ...tabButtonStyle, ...(mode === "signup" ? tabActiveStyle : {}) }}
-            onClick={() => setMode("signup")}
-          >
-            Sign Up
-          </button>
+    <div>
+      {inConnectStep ? (
+        <h1 style={titleStyle}>Pharmaceutical Supply Chain App</h1>
+      ) : (
+        <div style={heroAuthHeaderStyle}>
+          <div style={heroIconCircleStyle}>
+            <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M32 4L54 12V28C54 44 44 54 32 60C20 54 10 44 10 28V12L32 4Z" fill="#2563eb" />
+              <path d="M32 20V40M22 30H42" stroke="white" strokeWidth="5" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h1 style={{ ...heroTitleStyle, fontSize: "26px" }}>
+            <span style={{ color: "#0f172a" }}>Pharmaceutical </span>
+            <span style={{ color: "#2563eb" }}>Supply Chain App</span>
+          </h1>
+          <p style={{ ...heroTaglineStyle, fontSize: "13px" }}>
+            <span style={heroDashStyle} /> Secure. Transparent. Trusted. <span style={heroDashStyle} />
+          </p>
         </div>
       )}
 
-      {mode === "signin" ? (
-        <SignInForm onLoggedIn={onLoggedIn} onConnectStepChange={setInConnectStep} onForgotPassword={onForgotPassword} />
-      ) : (
-        <SignUpForm onSignedUp={() => setMode("signin")} />
-      )}
+      <div style={inConnectStep ? heroFloatingDarkCardStyle : heroFloatingLightCardStyle}>
+        {mode === "signin" ? (
+          <SignInForm
+            onLoggedIn={onLoggedIn}
+            onConnectStepChange={setInConnectStep}
+            onForgotPassword={onForgotPassword}
+            onSwitchToSignUp={() => setMode("signup")}
+          />
+        ) : (
+          <SignUpForm onSignedUp={() => setMode("signin")} onSwitchToSignIn={() => setMode("signin")} />
+        )}
 
-      {!inConnectStep && (
-        <button style={{ ...buttonStyle, backgroundColor: "#333", marginTop: "12px" }} onClick={onBack}>
-          Back
-        </button>
-      )}
+        {!inConnectStep && (
+          <button style={heroLightBackButtonStyle} onClick={onBack}>
+            ← Back
+          </button>
+        )}
+      </div>
+
+      {!inConnectStep && <TrustFooter />}
     </div>
   );
 }
 
-function SignInForm({ onLoggedIn, onConnectStepChange, onForgotPassword }) {
+function SignInForm({ onLoggedIn, onConnectStepChange, onForgotPassword, onSwitchToSignUp }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [loading, setLoading] = useState(false);
 
@@ -870,8 +1038,14 @@ function SignInForm({ onLoggedIn, onConnectStepChange, onForgotPassword }) {
     return (
       <div>
         <p style={{ marginTop: 0 }}>
-          Signed in as <strong>{pendingLogin.username}</strong>. Connect MetaMask to finish — this
+          Signed in as <strong>{pendingLogin.username}</strong>. Connect MetaMask to finish-this
           confirms the wallet in this browser really belongs to this account.
+        </p>
+        <p style={{ fontSize: "13px", color: "#888" }}>
+          If MetaMask opens already connected to a <strong>different</strong> account than shown above,
+          click <strong>Edit accounts</strong> in the popup, <strong>untick</strong> the account
+          currently connected, <strong>tick</strong> the account for <strong>{pendingLogin.username}</strong>{" "}
+          ({pendingLogin.walletAddress}), then click Connect at the bottom.
         </p>
 
         <div style={{ ...readonlyBoxStyle, textAlign: "left", marginBottom: "12px" }}>
@@ -882,14 +1056,9 @@ function SignInForm({ onLoggedIn, onConnectStepChange, onForgotPassword }) {
           </code>
         </div>
 
-        <p style={{ fontSize: "13px", color: "#888" }}>
-          If MetaMask opens already connected to a <strong>different</strong> account than shown above,
-          click <strong>Edit accounts</strong> in the popup, <strong>untick</strong> the account
-          currently connected, <strong>tick</strong> the account for <strong>{pendingLogin.username}</strong>{" "}
-          ({pendingLogin.walletAddress}), then click Connect at the bottom.
-        </p>
+
         <p style={{ fontSize: "13px", color: "#f59e0b" }}>
-          If that address doesn't appear anywhere in the popup — not even under "Edit accounts" — it
+          If that address doesn't appear anywhere in the popup-not even under "Edit accounts" - it
           means this account was never imported into MetaMask in this browser. Use the button below
           instead of clicking Connect.
         </p>
@@ -907,7 +1076,7 @@ function SignInForm({ onLoggedIn, onConnectStepChange, onForgotPassword }) {
             style={{ ...buttonStyle, backgroundColor: "#333" }}
             onClick={() => setNeedsImport({ username: pendingLogin.username })}
           >
-            This account isn't imported yet — show me the key
+            account isn't imported yet - show me the key
           </button>
         )}
 
@@ -953,39 +1122,69 @@ function SignInForm({ onLoggedIn, onConnectStepChange, onForgotPassword }) {
   // ===== Step 1: plain username/password form =====
   return (
     <div>
-      <label style={labelStyle}>Username</label>
-      <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} style={inputStyle} />
-      <label style={labelStyle}>Password</label>
-      <input
-        type="password"
+      <h2 style={{ margin: 0, textAlign: "center", color: "#0f172a" }}>Sign In</h2>
+      <p style={heroAuthSubtitleStyle}>Welcome back! Please sign in to continue.</p>
+
+      <label style={heroFieldLabelStyle}>Username</label>
+      <IconInput
+        icon={<PersonFieldIcon />}
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        placeholder="Enter your username"
+      />
+
+      <label style={heroFieldLabelStyle}>Password</label>
+      <IconInput
+        icon={<LockFieldIcon />}
+        type={showPassword ? "text" : "password"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        style={inputStyle}
+        placeholder="Enter your password"
         onKeyDown={(e) => e.key === "Enter" && submit()}
+        rightToggle={{ open: showPassword, onClick: () => setShowPassword((v) => !v) }}
       />
-      <button style={buttonStyle} onClick={submit} disabled={loading}>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "-4px 0 16px" }}>
+        <label style={heroCheckboxRowStyle}>
+          <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+          Remember me
+        </label>
+        <button type="button" style={heroBlueLinkStyle} onClick={() => onForgotPassword?.()}>
+          Forgot password?
+        </button>
+      </div>
+
+      <button style={heroBlueButtonStyle} onClick={submit} disabled={loading}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M10 17l5-5-5-5M15 12H3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         {loading ? "Signing in..." : "Sign In"}
       </button>
-      <button
-        style={{ ...linkButtonStyle, marginTop: "10px" }}
-        onClick={() => onForgotPassword?.()}
-        type="button"
-      >
-        Forgot password?
-      </button>
+
       <MessageBox message={message} />
+
+      <p style={heroSwitchModeRowStyle}>
+        Don't have an account?{" "}
+        <button type="button" style={heroBlueLinkStyle} onClick={() => onSwitchToSignUp?.()}>
+          Register
+        </button>
+      </p>
     </div>
   );
 }
 
-function SignUpForm({ onSignedUp }) {
+function SignUpForm({ onSignedUp, onSwitchToSignIn }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState("");
   const [city, setCity] = useState("");
   const [sport, setSport] = useState("");
   const [food, setFood] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [loading, setLoading] = useState(false);
   const [importInfo, setImportInfo] = useState(null); // { walletAddress, privateKey } once signed up
@@ -1005,11 +1204,22 @@ function SignUpForm({ onSignedUp }) {
       setMessage({ type: "error", text: "Passwords do not match." });
       return;
     }
+    if (!agreedToTerms) {
+      setMessage({ type: "error", text: "Please agree to the Terms & Conditions and Privacy Policy." });
+      return;
+    }
 
     setLoading(true);
     try {
       setMessage({ type: "pending", text: "Creating your account and funding your wallet..." });
-      const result = await signup({ username: username.trim(), password, role, city, sport, food });
+      const result = await signup({
+        username: username.trim(),
+        password,
+        role,
+        city,
+        sport,
+        food,
+      });
       // NEW: show the MetaMask import step instead of going straight
       // back to Sign In — the account is useless for transactions until
       // it's imported.
@@ -1023,23 +1233,34 @@ function SignUpForm({ onSignedUp }) {
 
   return (
     <div>
-      <label style={labelStyle}>Username</label>
-      <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} style={inputStyle} />
+      <h2 style={{ margin: 0, textAlign: "center", color: "#0f172a" }}>Register</h2>
+      <p style={heroAuthSubtitleStyle}>Create your account to get started.</p>
 
-      <label style={labelStyle}>Password</label>
-      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
-      <p style={{ fontSize: "12px", color: "#888", marginTop: "-8px", marginBottom: "12px" }}>{PASSWORD_HINT}</p>
+      <label style={heroFieldLabelStyle}>Username</label>
+      <IconInput icon={<PersonFieldIcon />} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter your username" />
 
-      <label style={labelStyle}>Confirm Password</label>
-      <input
-        type="password"
+      <label style={heroFieldLabelStyle}>Password</label>
+      <IconInput
+        icon={<LockFieldIcon />}
+        type={showPassword ? "text" : "password"}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Create a password"
+        rightToggle={{ open: showPassword, onClick: () => setShowPassword((v) => !v) }}
+      />
+      <p style={{ fontSize: "12px", color: "#64748b", marginTop: "-10px", marginBottom: "12px" }}>{PASSWORD_HINT}</p>
+
+      <label style={heroFieldLabelStyle}>Confirm Password</label>
+      <IconInput
+        icon={<LockFieldIcon />}
+        type={showConfirmPassword ? "text" : "password"}
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
-        style={inputStyle}
+        placeholder="Confirm your password"
       />
 
-      <label style={labelStyle}>Role</label>
-      <select value={role} onChange={(e) => setRole(e.target.value)} style={inputStyle}>
+      <label style={heroFieldLabelStyle}>Role</label>
+      <select value={role} onChange={(e) => setRole(e.target.value)} style={heroSelectStyle}>
         <option value="">-- Select Role --</option>
         {ROLES.map((r) => (
           <option key={r} value={r}>
@@ -1048,8 +1269,8 @@ function SignUpForm({ onSignedUp }) {
         ))}
       </select>
 
-      <label style={labelStyle}>City</label>
-      <select value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle}>
+      <label style={heroFieldLabelStyle}>City</label>
+      <select value={city} onChange={(e) => setCity(e.target.value)} style={heroSelectStyle}>
         <option value="">-- Select City --</option>
         {INDIAN_CITIES.map((c) => (
           <option key={c} value={c}>
@@ -1060,8 +1281,8 @@ function SignUpForm({ onSignedUp }) {
 
       {/* NEW: two security questions, used later by Forgot Password
           instead of asking for an email you may not have registered. */}
-      <label style={labelStyle}>Favourite Sport (used for password recovery)</label>
-      <select value={sport} onChange={(e) => setSport(e.target.value)} style={inputStyle}>
+      <label style={heroFieldLabelStyle}>Favourite Sport (used for password recovery)</label>
+      <select value={sport} onChange={(e) => setSport(e.target.value)} style={heroSelectStyle}>
         <option value="">-- Select Sport --</option>
         {SPORTS.map((s) => (
           <option key={s} value={s}>
@@ -1070,8 +1291,8 @@ function SignUpForm({ onSignedUp }) {
         ))}
       </select>
 
-      <label style={labelStyle}>Favourite Food (used for password recovery)</label>
-      <select value={food} onChange={(e) => setFood(e.target.value)} style={inputStyle}>
+      <label style={heroFieldLabelStyle}>Favourite Food (used for password recovery)</label>
+      <select value={food} onChange={(e) => setFood(e.target.value)} style={heroSelectStyle}>
         <option value="">-- Select Food --</option>
         {INDIAN_FOODS.map((f) => (
           <option key={f} value={f}>
@@ -1079,15 +1300,33 @@ function SignUpForm({ onSignedUp }) {
           </option>
         ))}
       </select>
-      <p style={{ fontSize: "12px", color: "#888", marginTop: "-8px", marginBottom: "12px" }}>
-        Remember these two — you'll be asked to pick them again (not shown to you) if you ever need to
+      <p style={{ fontSize: "12px", color: "#64748b", marginTop: "-8px", marginBottom: "14px" }}>
+        Remember these two-you'll be asked to pick them again (not shown to you) if you ever need to
         reset your password.
       </p>
 
-      <button style={buttonStyle} onClick={submit} disabled={loading}>
-        {loading ? "Creating account..." : "Sign Up"}
+      <label style={{ ...heroCheckboxRowStyle, marginBottom: "16px" }}>
+        <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} />
+        I agree to the <span style={{ color: "#2563eb", fontWeight: "600" }}>Terms &amp; Conditions</span> and{" "}
+        <span style={{ color: "#2563eb", fontWeight: "600" }}>Privacy Policy</span>
+      </label>
+
+      <button style={heroBlueButtonStyle} onClick={submit} disabled={loading}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="9" cy="8" r="4" stroke="white" strokeWidth="2" />
+          <path d="M2 20c0-4.4 3.1-8 7-8s7 3.6 7 8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+          <path d="M19 8v6M16 11h6" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        {loading ? "Creating account..." : "Create Account"}
       </button>
       <MessageBox message={message} />
+
+      <p style={heroSwitchModeRowStyle}>
+        Already have an account?{" "}
+        <button type="button" style={heroBlueLinkStyle} onClick={() => onSwitchToSignIn?.()}>
+          Sign in
+        </button>
+      </p>
 
       {importInfo && (
         <ImportWalletModal
@@ -1166,13 +1405,13 @@ function ForgotPasswordFlow({ onBack }) {
   };
 
   return (
-    <div style={cardStyle}>
+    <div style={heroFloatingDarkCardStyle}>
       <h2>Forgot Password</h2>
 
       {step === "answer" && (
         <>
           <label style={labelStyle}>Username</label>
-          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} style={inputStyle} />
+          <input type="text" value={username} placeholder="Enter user name" onChange={(e) => setUsername(e.target.value)} style={inputStyle} />
 
           <label style={labelStyle}>Favourite Sport</label>
           <select value={sport} onChange={(e) => setSport(e.target.value)} style={inputStyle}>
@@ -1356,7 +1595,7 @@ function Dashboard({ session, onLogout }) {
               full-width text buttons. */}
           <div style={sidebarIconRailStyle}>
             <SidebarIconButton
-              icon="🏠"
+              icon={HomeIcon}
               label="Welcome"
               active={activeTab === "welcome"}
               onClick={() => setActiveTab("welcome")}
@@ -1364,7 +1603,7 @@ function Dashboard({ session, onLogout }) {
             {navItems.map((item) => (
               <SidebarIconButton
                 key={item.key}
-                icon={NAV_ICONS[item.key] || "•"}
+                icon={NAV_ICONS[item.key] || DocumentIcon}
                 label={item.label}
                 active={activeTab === item.key}
                 onClick={() => setActiveTab(item.key)}
@@ -1404,7 +1643,7 @@ function Dashboard({ session, onLogout }) {
 
 // NEW: a single rounded icon button + caption, used for the WhatsApp-
 // style sidebar rail.
-function SidebarIconButton({ icon, label, active, onClick }) {
+function SidebarIconButton({ icon: Icon, label, active, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -1431,11 +1670,13 @@ function SidebarIconButton({ icon, label, active, onClick }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: "18px",
-          backgroundColor: active ? "rgba(255,255,255,0.15)" : "#1f1f1f",
+          // Flat gray circle for inactive icons, subtle white tint for the
+          // active one — no colorful emoji backgrounds.
+          backgroundColor: active ? "rgba(255,255,255,0.15)" : "#2a2a2a",
+          color: active ? "#fff" : "#999",
         }}
       >
-        {icon}
+        <Icon />
       </span>
       <span style={{ fontSize: "11px", textAlign: "center", lineHeight: "1.2" }}>{label}</span>
     </button>
@@ -1545,7 +1786,7 @@ function WelcomePanel({ session }) {
       </p>
       <p style={{ color: "#888", fontSize: "14px", textAlign: "left" }}>
         Use the panel on the left to {ROLE_WELCOME_HINT[role] || "manage your batches"}. You can also
-        look up the full history of any batch — yours or anyone else's — from Batch History, using just
+        look up the full history of any batch-yours or anyone else's from Batch History, using just
         its batch code.
       </p>
 
@@ -1562,13 +1803,13 @@ function WelcomePanel({ session }) {
               style={{ ...buttonStyle, backgroundColor: "#16a34a" }}
               onClick={() => showRatingList("positive")}
             >
-              👍 Positive Ratings ({stats.positive})
+               Positive Ratings ({stats.positive})
             </button>
             <button
               style={{ ...buttonStyle, backgroundColor: "#dc2626" }}
               onClick={() => showRatingList("negative")}
             >
-              👎 Negative Ratings ({stats.negative})
+               Negative Ratings ({stats.negative})
             </button>
           </div>
 
@@ -2023,6 +2264,9 @@ function RegisterBatchCard({ session, onDone }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [confirming, setConfirming] = useState(false);
+  // NEW: kept around after the form clears, so the QR code (which
+  // encodes this batch's code) still has something to render.
+  const [registeredCode, setRegisteredCode] = useState(null);
 
   const validate = () => {
     if (!productName.trim() || !batchCode.trim() || !quantity || !manufactureDate || !expiryDate) {
@@ -2063,6 +2307,7 @@ function RegisterBatchCard({ session, onDone }) {
       setMessage({ type: "pending", text: "Waiting for confirmation..." });
       await tx.wait();
       setMessage({ type: "success", text: `Batch "${batchCode.trim()}" registered successfully!` });
+      setRegisteredCode(batchCode.trim());
       setProductName("");
       setBatchCode("");
       setQuantity("");
@@ -2099,13 +2344,25 @@ function RegisterBatchCard({ session, onDone }) {
       <label style={labelStyle}>Manufacturer</label>
       <div style={readonlyBoxStyle}>{session.username} - {session.role}</div>
       <p style={{ fontSize: "12px", color: "#888", marginTop: "-8px", marginBottom: "12px" }}>
-        The manufacturer is always your signed-in account — it cannot be typed manually.
+        The manufacturer is always your signed-in account - it cannot be typed manually.
       </p>
 
       <button onClick={openConfirm} disabled={loading} style={buttonStyle}>
         {loading ? "Processing..." : "Register Batch"}
       </button>
       <MessageBox message={message} />
+
+      {/* NEW: every batch, once registered, gets a QR code encoding its
+          batch code — download it now to print on the box, or save a
+          canonical copy to IPFS. */}
+      {registeredCode && (
+        <div style={{ marginTop: "16px", padding: "16px", borderRadius: "10px", border: "1px solid #333" }}>
+          <p style={{ marginTop: 0, marginBottom: "12px", color: "#888", fontSize: "13px" }}>
+            QR code for <strong style={{ color: "#ccc" }}>{registeredCode}</strong>
+          </p>
+          <QRCodeBox batchCode={registeredCode} />
+        </div>
+      )}
 
       {confirming && (
         <ConfirmAndSign
@@ -2499,19 +2756,18 @@ function ConsumerVerify({ onBack }) {
   };
 
   return (
-    <div style={cardStyle}>
-      <h2>Verify a Tablet</h2>
-      <p style={{ fontSize: "13px", color: "#888", marginTop: "-8px" }}>
+    <div style={heroFloatingLightCardStyle}>
+      <h2 style={{ color: "#0f172a" }}>Verify a Tablet</h2>
+      <p style={{ fontSize: "13px", color: "#64748b", marginTop: "-8px" }}>
         No account needed. Enter the batch code printed on the back of the tablet box to check
         whether it's genuine and see its full journey.
       </p>
 
-      <label style={labelStyle}>Batch Code</label>
-      <input
-        type="text"
-        placeholder="e.g. PARACETAMOL-001"
+      <label style={{ ...labelStyle, color: "#0f172a", fontWeight: "600" }}>Batch Code</label>
+      <BatchCodeInput
         value={batchCode}
-        onChange={(e) => setBatchCode(e.target.value)}
+        onChange={setBatchCode}
+        placeholder="e.g. PARACETAMOL-001"
         style={inputStyle}
         onKeyDown={(e) => e.key === "Enter" && verify()}
       />
@@ -2800,6 +3056,16 @@ const heroFloatingDarkCardStyle = {
   backgroundColor: "#161616",
   boxShadow: "0 20px 50px rgba(15,23,42,0.25)",
 };
+// A white card for pages that should look like the reference mockup
+// (ConsumerVerify) rather than keep the app's dark theme — same idea as
+// heroFloatingDarkCardStyle above, just the light variant.
+const heroFloatingLightCardStyle = {
+  ...cardStyle,
+  backgroundColor: "#ffffff",
+  color: "#0f172a",
+  border: "1px solid #eef2f7",
+  boxShadow: "0 20px 50px rgba(15,23,42,0.12)",
+};
 const heroAdminButtonStyle = {
   position: "fixed",
   top: "20px",
@@ -2893,6 +3159,54 @@ const heroFooterItemStyle = {
   alignItems: "center",
   gap: "6px",
 };
+// ============================================================
+// NEW: Sign In / Register redesign — icon-prefixed inputs, checkbox
+// rows, and the blue button/link styles used to match the reference
+// mockup.
+// ============================================================
+const heroAuthHeaderStyle = { textAlign: "center", marginBottom: "18px" };
+const heroAuthSubtitleStyle = { color: "#2563eb", fontSize: "13px", margin: "4px 0 22px", textAlign: "center" };
+const heroFieldLabelStyle = { display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "600", color: "#0f172a", textAlign: "left" };
+const heroInputWrapperStyle = { position: "relative", marginBottom: "15px" };
+const heroInputIconStyle = {
+  position: "absolute",
+  left: "12px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  display: "flex",
+  pointerEvents: "none",
+};
+const heroInputRightToggleStyle = {
+  position: "absolute",
+  right: "10px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  display: "flex",
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+};
+const heroCheckboxRowStyle = { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#334155" };
+const heroBlueButtonStyle = {
+  ...heroButtonStyle,
+  backgroundColor: "#2563eb",
+  marginBottom: "6px",
+};
+const heroSwitchModeRowStyle = { textAlign: "center", fontSize: "13px", color: "#64748b", margin: "14px 0" };
+const heroBlueLinkStyle = { color: "#2563eb", fontWeight: "600", background: "none", border: "none", cursor: "pointer", fontSize: "13px", padding: 0, textDecoration: "none" };
+const heroLightBackButtonStyle = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: "8px",
+  border: "1px solid #e2e8f0",
+  backgroundColor: "#ffffff",
+  color: "#0f172a",
+  fontSize: "15px",
+  fontWeight: "600",
+  cursor: "pointer",
+  marginTop: "6px",
+};
 const landingCardsRow = {
   display: "flex",
   gap: "16px",
@@ -2918,7 +3232,16 @@ const inputStyle = {
   border: "1px solid #ccc",
   fontSize: "16px",
   boxSizing: "border-box",
+  // CHANGED: the page sets color-scheme: light dark (see index.css), so
+  // browsers render native inputs in dark mode (near-black background,
+  // barely-visible text) whenever the OS is set to dark — regardless of
+  // what color the card around them is. Forcing light here keeps every
+  // input readable on every card, light or dark.
+  backgroundColor: "#ffffff",
+  color: "#111827",
+  colorScheme: "light",
 };
+const heroSelectStyle = { ...inputStyle, textAlign: "left" };
 const readonlyBoxStyle = {
   width: "100%",
   padding: "12px",

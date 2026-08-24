@@ -1,18 +1,3 @@
-// frontend/src/components/BatchTimeline.jsx
-//
-// Presentational pieces for a batch's full event history — the actual
-// fetching lives in batchTimelineData.js's useBatchTimeline hook (split
-// out into its own plain-JS module so this file only exports React
-// components, which Vite's Fast Refresh requires for a clean dev
-// experience).
-//
-// Used in two places:
-//   1. BatchHistory.jsx — the standalone "Fetch Batch" page, where the
-//      user types a batch code/ID and clicks a button.
-//   2. Inline inside the sidebar dashboard's batch lists (Register
-//      Batch, Ownership Transfer, My Batches) — clicking a batch row
-//      shows its history right there via BatchTimelineView.
-
 import { DELIVERY_STATUS_LABELS, useBatchTimeline } from "./batchTimelineData";
 import { shortenAddress } from "../participants";
 

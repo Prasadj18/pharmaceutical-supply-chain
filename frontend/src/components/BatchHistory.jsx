@@ -1,11 +1,3 @@
-// frontend/src/components/BatchHistory.jsx
-//
-// The standalone "Fetch Batch" page: free-text batch code/ID input ->
-// resolve to a numeric id -> render its full history. The actual
-// fetching + rendering logic now lives in BatchTimeline.jsx (shared
-// with the inline "click a batch row to see its history" views on the
-// new sidebar dashboard) — this file just handles the code/ID -> id
-// resolution and the input UI around it.
 import { useState } from "react";
 import { getReadOnlyContract } from "../contract";
 import { useBatchTimeline } from "./batchTimelineData";
